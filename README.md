@@ -32,17 +32,6 @@ An intelligent conversational AI companion with emotional intelligence, memory, 
 
 ```
 Companion/
-├── backend/                 # FastAPI backend server
-│   ├── app/
-│   │   ├── main.py         # WebSocket endpoints and routing
-│   │   ├── dialogue.py     # Conversation management
-│   │   ├── emotion.py      # Mood and emotion processing
-│   │   ├── persona.py      # Personality definitions
-│   │   ├── memory.py       # Memory system
-│   │   ├── guardrails.py   # Content filtering
-│   │   └── stt_stream.py   # Speech-to-text processing
-│   ├── requirements.txt    # Python dependencies
-│   └── README_run.md       # Backend setup instructions
 ├── web/                    # Frontend web interface
 │   ├── index.html         # Main web page
 │   └── pcm-worklet.js     # Audio processing
@@ -50,34 +39,18 @@ Companion/
 └── README.md             # This file
 ```
 
+**Note**: The backend code is developed and hosted on Kaggle. See the [Kaggle Notebook](https://www.kaggle.com/code/klasta/companion) for the complete backend implementation.
+
 ## Quick Start
 
-### Prerequisites
-- Python 3.8+
-- Node.js (for web server)
-- Docker (optional)
+### Backend (Kaggle Notebook)
 
-### Backend Setup
+The backend is implemented and hosted on Kaggle. To use it:
 
-1. **Install Dependencies**
-   ```bash
-   cd backend
-   pip install -r requirements.txt
-   ```
-
-2. **Environment Variables**
-   ```bash
-   # Create .env file in backend directory
-   MODEL_ID=Austism/chronos-hermes-13b
-   GEMINI_API_KEY=your_gemini_api_key_here
-   USE_STT=0  # Set to 1 to enable speech-to-text
-   ```
-
-3. **Start Backend Server**
-   ```bash
-   cd backend
-   uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-   ```
+1. **Visit the Kaggle Notebook**: [Companion Backend](https://www.kaggle.com/code/klasta/companion)
+2. **Run the notebook** to start the backend server
+3. **Get the WebSocket URL** from the ngrok tunnel output
+4. **Use the provided URL** in your frontend
 
 ### Frontend Setup
 
@@ -89,7 +62,7 @@ Companion/
 
 2. **Access Application**
    - Open browser to: `http://127.0.0.1:5500`
-   - Backend API: `http://localhost:8000`
+   - Update the WebSocket URL to point to your Kaggle backend
 
 ### Docker Setup
 
@@ -97,24 +70,46 @@ Companion/
 docker-compose up -d
 ```
 
+## Backend Implementation (Kaggle)
+
+The backend is implemented in a Kaggle notebook with the following key components:
+
+### 🔧 **Core Components**
+- **GeminiReflector**: AI director that plans conversation strategies
+- **HfActor**: Local language model for generating responses
+- **DialogueManager**: Orchestrates the conversation flow
+- **CognitiveMemory**: Manages conversation history and user facts
+
+### 🚀 **Key Features**
+- **Local Model**: Uses Chronos-Hermes-13B for response generation
+- **AI Director**: Gemini 2.0 Flash for conversation planning
+- **Identity Protection**: Robust guardrails against AI identity probes
+- **Relationship Tracking**: Dynamic relationship stages (Stranger → Friend)
+- **Memory System**: Episodic and semantic memory management
+
+### 📡 **Deployment**
+- **Kaggle Environment**: Runs on Kaggle's GPU infrastructure
+- **ngrok Tunnel**: Exposes local server to the internet
+- **WebSocket API**: Real-time bidirectional communication
+
 ## Configuration
 
 ### Personas
-Personas are defined in `backend/app/persona.py`. Each persona includes:
+Personas are defined in the Kaggle notebook. Each persona includes:
 - **Core Identity**: Name, age, essence, backstory
 - **Speech Patterns**: Different tones for stranger/friend/close friend
 - **Worldview**: Core beliefs and ethical boundaries
 - **Inner World**: Secret fears and emotional triggers
 
 ### Memory System
-- **Short-term**: Recent conversation turns (Redis)
-- **Long-term**: Vector-based semantic memory (Qdrant)
-- **Memory Chips**: Automatic injection based on conversation triggers
+- **Short-term**: Recent conversation turns
+- **Long-term**: Semantic facts about the user
+- **Relationship Tracking**: Dynamic relationship progression
 
 ### Guardrails
 - **Content Filtering**: Illegal content detection
+- **Identity Protection**: Prevents AI identity revelation
 - **Style Enforcement**: Prevents repetitive or inappropriate responses
-- **Length Control**: Configurable response length limits
 
 ## API Endpoints
 
@@ -122,61 +117,60 @@ Personas are defined in `backend/app/persona.py`. Each persona includes:
 Real-time bidirectional communication for chat.
 
 **Message Types:**
-- `chat`: Send user message
-- `state_update`: Mood and emotional state updates
-- `partial_transcript`: Speech-to-text partial results
+- `utterance`: Send/receive chat messages
+- Connection automatically provides initial greeting
 
-### Health Check (`/health`)
-Returns server status.
-
-### Kill (`/kill`)
-Gracefully terminates the server.
+### Health Check
+The backend provides health status through the WebSocket connection.
 
 ## Development
 
+### Backend Development
+1. **Fork the Kaggle notebook**: [Companion Backend](https://www.kaggle.com/code/klasta/companion)
+2. **Modify the code** in the notebook
+3. **Test changes** by running the notebook
+4. **Share your version** or contribute back
+
 ### Adding New Personas
-1. Edit `backend/app/persona.py`
+1. Edit the `PERSONAS` dictionary in the Kaggle notebook
 2. Add new persona definition following the existing structure
 3. Include foundational beliefs, speech patterns, and emotional triggers
 
 ### Customizing Emotions
-- Modify `backend/app/emotion.py` for emotion classification
-- Adjust forgiveness curves in `MoodEngine`
-- Update emotion triggers and responses
-
-### Memory Customization
-- Configure memory retention in `backend/app/memory.py`
-- Adjust vector similarity thresholds
-- Modify memory chip triggers
+- Modify the `DialogueManager` class for emotion handling
+- Adjust relationship progression in `_update_relationship_state`
+- Update memory management in `CognitiveMemory`
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Import Errors**
-   - Ensure all dependencies are installed: `pip install -r requirements.txt`
-   - Check Python version compatibility
+1. **Kaggle Backend Connection**
+   - Ensure the Kaggle notebook is running
+   - Check the ngrok tunnel URL is correct
+   - Verify WebSocket connection in browser console
 
-2. **WebSocket Connection Issues**
-   - Verify backend is running on correct port
+2. **Frontend Connection Issues**
+   - Update WebSocket URL to match Kaggle backend
    - Check CORS settings for local development
+   - Monitor browser console for connection errors
 
-3. **Memory/Model Loading**
-   - Ensure sufficient RAM for model loading
-   - Check model download permissions
+3. **Model Loading**
+   - Kaggle provides GPU resources for model loading
+   - Check notebook logs for model initialization status
+   - Ensure all dependencies are installed in Kaggle environment
 
 ### Logs
-- Backend logs are displayed in the web terminal
+- Backend logs are displayed in the Kaggle notebook
 - Check browser console for frontend errors
 - Monitor WebSocket connection status
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+1. **Fork the Kaggle notebook**: [Companion Backend](https://www.kaggle.com/code/klasta/companion)
+2. **Make your changes** in the notebook
+3. **Test thoroughly** by running the notebook
+4. **Share your improved version** or contribute back to the main notebook
 
 ## License
 
@@ -187,4 +181,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Built with FastAPI, WebSockets, and modern web technologies
 - Uses Hugging Face transformers for language models
 - Emotion classification powered by RoBERTa
-- Vector memory system with Qdrant
+- Backend hosted on Kaggle's GPU infrastructure
+- ngrok for secure tunnel creation
