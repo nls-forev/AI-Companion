@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.venv/
+venv/
+.env
+
+# Node/Web
+node_modules/
+dist/
+build/
+.eslintcache
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data/Models
+models/
+checkpoints/
+
+# Docker volumes (if bind mounted locally)
+.qdrant/
+.redis/ 

@@ -1,0 +1,744 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>AI Narrative Companion</title>
+
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet"/>
+
+        <script type="importmap">
+            {
+                "imports": {
+                    "three": "https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js"
+                }
+            }
+        </script>
+
+        <style>
+            :root {
+                --bg-dark: #0a0a0c;
+                --bg-elev: #141418;
+                --glass: rgba(20, 20, 24, 0.6);
+                --border: #2a2a30;
+                --line: #3a3a42;
+                --text-1: #f0f0f2;
+                --text-2: #a0a0a8;
+                --text-3: #707078;
+                --accent: #8a63d2;
+                --accent-hover: #9f7aea;
+                --shadow-1: 0 8px 32px rgba(0, 0, 0, 0.4);
+                --shadow-2: 0 16px 48px rgba(0, 0, 0, 0.5);
+                --radius-md: 12px;
+                --font-sans: "Inter", system-ui, sans-serif;
+                --font-serif: "Lora", serif;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            html,
+            body {
+                margin: 0;
+                padding: 0;
+                height: 100%;
+                background:
+                    radial-gradient(
+                        1000px 700px at 90% -10%,
+                        #2a2142 0%,
+                        transparent 70%
+                    ),
+                    radial-gradient(
+                        800px 600px at 10% 110%,
+                        #17353e 0%,
+                        transparent 70%
+                    ),
+                    var(--bg-dark);
+                color: var(--text-1);
+                font-family: var(--font-sans);
+                overflow: hidden;
+            }
+            #bg-canvas {
+                position: fixed;
+                inset: 0;
+                width: 100%;
+                height: 100%;
+                z-index: 1;
+                pointer-events: none;
+                opacity: 0.7;
+            }
+            #app {
+                position: relative;
+                z-index: 2;
+                height: 100vh;
+                display: grid;
+                grid-template-rows: auto 1fr auto;
+            }
+            header {
+                position: sticky;
+                top: 0;
+                z-index: 5;
+                backdrop-filter: blur(16px);
+                -webkit-backdrop-filter: blur(16px);
+                background: linear-gradient(
+                    180deg,
+                    rgba(12, 12, 14, 0.85),
+                    rgba(12, 12, 14, 0.6)
+                );
+                border-bottom: 1px solid var(--border);
+                box-shadow: var(--shadow-1);
+            }
+            .header-inner {
+                margin: 0 auto;
+                max-width: 900px;
+                padding: 14px 20px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .brand h1 {
+                margin: 0;
+                font-size: 1.1rem;
+                font-weight: 600;
+            }
+            .btn {
+                background: var(--bg-elev);
+                border: 1px solid var(--border);
+                color: var(--text-2);
+                border-radius: var(--radius-md);
+                padding: 9px 14px;
+                font-size: 0.9rem;
+                font-weight: 500;
+                cursor: pointer;
+                transition: 0.2s ease;
+            }
+            .btn:hover {
+                background: var(--accent);
+                color: white;
+                border-color: var(--accent-hover);
+            }
+            main {
+                overflow-y: auto;
+            }
+            .chat-wrap {
+                max-width: 800px;
+                margin: 0 auto;
+                padding: 24px 20px;
+            }
+            #system-status {
+                text-align: center;
+                color: var(--text-2);
+                padding: 12px 0;
+                font-size: 0.9rem;
+            }
+            .bubble {
+                margin: 20px 0;
+                animation: rise 0.3s ease-out;
+                display: flex;
+            }
+            .bubble.user {
+                justify-content: flex-end;
+            }
+            .bubble .content {
+                max-width: 85%;
+                padding: 14px 18px;
+                border-radius: 18px;
+                line-height: 1.65;
+            }
+            .bubble.user .content {
+                background: var(--accent);
+                color: white;
+                border-bottom-right-radius: 6px;
+            }
+            .bubble.ai .content {
+                background: var(--bg-elev);
+                border: 1px solid var(--border);
+                border-bottom-left-radius: 6px;
+                font-family: var(--font-serif);
+                white-space: pre-wrap;
+            }
+            .typing {
+                display: inline-flex;
+                gap: 5px;
+                align-items: center;
+                padding: 14px 18px;
+            }
+            .dot {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: var(--text-3);
+                animation: blink 1.2s infinite ease-in-out;
+            }
+            .dot:nth-child(2) {
+                animation-delay: 0.2s;
+            }
+            .dot:nth-child(3) {
+                animation-delay: 0.4s;
+            }
+            @keyframes blink {
+                0%,
+                80%,
+                100% {
+                    transform: scale(0.5);
+                    opacity: 0.5;
+                }
+                40% {
+                    transform: scale(1);
+                    opacity: 1;
+                }
+            }
+            @keyframes rise {
+                from {
+                    opacity: 0;
+                    transform: translateY(10px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+            footer {
+                position: sticky;
+                bottom: 0;
+                backdrop-filter: blur(16px);
+                -webkit-backdrop-filter: blur(16px);
+                background: linear-gradient(
+                    180deg,
+                    rgba(12, 12, 14, 0.2),
+                    rgba(12, 12, 14, 0.8)
+                );
+                border-top: 1px solid var(--border);
+                padding: 16px 20px;
+            }
+            .composer {
+                max-width: 800px;
+                margin: 0 auto;
+                display: flex;
+                gap: 12px;
+                align-items: center;
+            }
+            #chat-input {
+                flex-grow: 1;
+                padding: 14px 18px;
+                background: var(--bg-elev);
+                color: var(--text-1);
+                border: 1px solid var(--border);
+                border-radius: var(--radius-md);
+                font-size: 1rem;
+                line-height: 1.5;
+                resize: none;
+                height: 50px;
+                transition: 0.2s ease;
+            }
+            #chat-input:focus {
+                outline: none;
+                border-color: var(--accent);
+                background: #1a1a1f;
+            }
+            #send-btn {
+                background: var(--accent);
+                color: white;
+                border: 0;
+                border-radius: var(--radius-md);
+                padding: 0 20px;
+                height: 50px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: 0.2s ease;
+            }
+            #send-btn:disabled {
+                background: #5c4a81;
+                cursor: not-allowed;
+            }
+            .meta {
+                font-size: 0.8rem;
+                color: var(--text-3);
+                margin-left: 10px;
+            }
+            .debug {
+                font-family: monospace;
+                font-size: 12px;
+                color: #ccc;
+                padding: 8px;
+                border-radius: 8px;
+                background: rgba(0, 0, 0, 0.2);
+                margin-top: 10px;
+            }
+        </style>
+    </head>
+
+    <body>
+        <canvas id="bg-canvas"></canvas>
+        <div id="app">
+            <header>
+                <div class="header-inner">
+                    <div class="brand"><h1>AI Narrative Companion</h1></div>
+                    <div style="display: flex; align-items: center; gap: 12px">
+                        <button id="new-chat-btn" class="btn">
+                            ✨ New Chat
+                        </button>
+                        <div class="meta" id="conn-meta">—</div>
+                    </div>
+                </div>
+            </header>
+
+            <main id="scroll-area">
+                <div class="chat-wrap">
+                    <div id="system-status">Connecting to server...</div>
+                    <div id="messages" aria-live="polite"></div>
+                    <div
+                        id="debug-log"
+                        class="debug"
+                        style="display: none"
+                    ></div>
+                </div>
+            </main>
+
+            <footer>
+                <div class="composer">
+                    <textarea
+                        id="chat-input"
+                        placeholder="Connecting..."
+                        rows="1"
+                    ></textarea>
+                    <button id="send-btn" disabled>Send</button>
+                </div>
+            </footer>
+        </div>
+
+        <script type="module">
+            import * as THREE from "three";
+
+            /* -------------------------
+         DOM helpers & state
+         ------------------------- */
+            const $ = (id) => document.getElementById(id);
+            const systemStatus = $("system-status");
+            const messages = $("messages");
+            const chatInput = $("chat-input");
+            const sendBtn = $("send-btn");
+            const newChatBtn = $("new-chat-btn");
+            const connMeta = $("conn-meta");
+            const debugLog = $("debug-log");
+
+            let ws = null;
+            let isReady = false;
+            let isGenerating = false;
+            let reconnectDelay = 1000;
+            let lastUrlTried = null;
+            let pendingTypingBubble = null;
+            let debugEnabled = true; // Enable debug by default to help troubleshoot
+
+            function dbg(...args) {
+                console.log("[DEBUG]", ...args);
+                if (!debugEnabled) return;
+                debugLog.style.display = "block";
+                debugLog.textContent =
+                    `${new Date().toLocaleTimeString()} — ${args.map((a) => (typeof a === "object" ? JSON.stringify(a) : String(a))).join(" ")}\n` +
+                    debugLog.textContent;
+            }
+
+            function setStatus(text = "", show = true) {
+                systemStatus.textContent = text;
+                systemStatus.style.display = show ? "block" : "none";
+                console.log("[STATUS]", text);
+            }
+
+            function updateUI() {
+                const canSend =
+                    isReady &&
+                    !isGenerating &&
+                    chatInput.value.trim().length > 0;
+                chatInput.disabled = !isReady || isGenerating;
+                sendBtn.disabled = !canSend;
+                chatInput.placeholder = isReady
+                    ? "Type a message..."
+                    : "Connecting...";
+                connMeta.textContent = isReady ? "Connected" : "Disconnected";
+            }
+
+            function scrollToBottom() {
+                window.setTimeout(() => {
+                    window.scrollTo({
+                        top: document.body.scrollHeight,
+                        behavior: "smooth",
+                    });
+                }, 10);
+            }
+
+            function addBubble(role, text) {
+                const bubble = document.createElement("div");
+                bubble.className = `bubble ${role}`;
+                const content = document.createElement("div");
+                content.className = "content";
+                content.textContent = text;
+                bubble.appendChild(content);
+                messages.appendChild(bubble);
+                scrollToBottom();
+                return bubble;
+            }
+
+            function addTypingIndicator() {
+                const bubble = document.createElement("div");
+                bubble.className = "bubble ai";
+                const typing = document.createElement("div");
+                typing.className = "typing";
+                typing.innerHTML =
+                    '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+                bubble.appendChild(typing);
+                messages.appendChild(bubble);
+                scrollToBottom();
+                return bubble;
+            }
+
+            /* -------------------------
+         WebSocket helpers
+         ------------------------- */
+
+            function buildWsUrl() {
+                const params = new URLSearchParams(window.location.search);
+                let api = params.get("api");
+
+                // CHANGE: Hardcode your ngrok URL here temporarily
+                if (!api || api.trim() === "") {
+                    // Replace this with your actual ngrok URL
+                    api = "wss://e11724d5f4d8.ngrok-free.app";
+                }
+
+                // Allow callers to pass a full ws/http url or plain host
+                api = api.trim();
+
+                // If user accidentally included trailing /ws, strip it (we append once)
+                api = api.replace(/\/ws\/?$/i, "");
+
+                // Convert http(s) -> ws(s) if needed
+                if (/^https?:\/\//i.test(api)) {
+                    api = api.replace(/^http/i, "ws");
+                } else if (!/^wss?:\/\//i.test(api)) {
+                    // if they passed only host like "host:8000" or "host", prefix based on current origin protocol
+                    api =
+                        (window.location.protocol === "https:"
+                            ? "wss://"
+                            : "ws://") + api;
+                }
+
+                // Ensure there's no double slashes
+                api = api.replace(/\/+$/g, "");
+
+                return api + "/ws";
+            }
+
+            function connect() {
+                const wsUrl = buildWsUrl();
+                lastUrlTried = wsUrl;
+                dbg("Attempting connect to", wsUrl);
+                setStatus("Connecting to AI...");
+                updateUI();
+
+                try {
+                    ws = new WebSocket(wsUrl);
+                } catch (err) {
+                    dbg("WebSocket construction error", err);
+                    scheduleReconnect();
+                    return;
+                }
+
+                ws.onopen = () => {
+                    dbg("ws open");
+                    isReady = true;
+                    isGenerating = false;
+                    reconnectDelay = 1000;
+                    setStatus("", false);
+                    updateUI();
+                };
+
+                ws.onerror = (ev) => {
+                    dbg("ws error", ev);
+                    setStatus(
+                        `Connection error. Trying to connect to: ${wsUrl}`,
+                    );
+                    updateUI();
+                };
+
+                ws.onclose = (ev) => {
+                    dbg("ws closed", ev.code, ev.reason);
+                    isReady = false;
+                    isGenerating = false;
+                    pendingTypingBubble && pendingTypingBubble.remove();
+                    pendingTypingBubble = null;
+                    updateUI();
+                    setStatus(`Disconnected (${ev.code}). Reconnecting...`);
+                    scheduleReconnect();
+                };
+
+                ws.onmessage = (ev) => {
+                    // Graceful parse of server messages (they may send JSON or plain text)
+                    let data = null;
+                    try {
+                        data = JSON.parse(ev.data);
+                    } catch (err) {
+                        // not JSON — treat as raw assistant text
+                        dbg("incoming non-json:", ev.data);
+                        data = { type: "utterance", text: String(ev.data) };
+                    }
+
+                    dbg("INCOMING", data);
+
+                    // If server used type "processing_started" / "utterance" / "error"
+                    const type = data.type || "utterance";
+
+                    // pendingBubble logic: find existing typing bubble
+                    const pending =
+                        messages.querySelector(".typing")?.parentElement;
+
+                    switch (type) {
+                        case "processing_started":
+                            isGenerating = true;
+                            if (!pending)
+                                pendingTypingBubble = addTypingIndicator();
+                            updateUI();
+                            break;
+
+                        case "utterance":
+                            isGenerating = false;
+                            // remove typing indicator if present
+                            if (pending) pending.remove();
+                            pendingTypingBubble = null;
+                            addBubble("ai", data.text || "");
+                            updateUI();
+                            break;
+
+                        case "error":
+                            isGenerating = false;
+                            if (pending) pending.remove();
+                            pendingTypingBubble = null;
+                            setStatus(
+                                data.text || "An unexpected error occurred.",
+                            );
+                            addBubble(
+                                "ai",
+                                data.text || "An unexpected error occurred.",
+                            );
+                            updateUI();
+                            break;
+
+                        default:
+                            // Unknown types - append to debug and show text if available
+                            if (data.text) {
+                                if (pending) pending.remove();
+                                addBubble("ai", data.text);
+                            }
+                            updateUI();
+                            break;
+                    }
+                };
+            }
+
+            function scheduleReconnect() {
+                reconnectDelay = Math.min(30000, reconnectDelay * 1.8);
+                dbg(`Reconnecting in ${Math.round(reconnectDelay / 1000)}s...`);
+                setTimeout(() => {
+                    connect();
+                }, reconnectDelay);
+            }
+
+            function sendPayload(payload) {
+                if (!ws || ws.readyState !== WebSocket.OPEN) {
+                    dbg(
+                        "attempted send while ws not open, readyState:",
+                        ws ? ws.readyState : "null",
+                    );
+                    setStatus("Not connected. Message not sent.");
+                    return false;
+                }
+                try {
+                    const jsonStr = JSON.stringify(payload);
+                    ws.send(jsonStr);
+                    dbg("SENT", payload);
+                    return true;
+                } catch (err) {
+                    dbg("send error", err);
+                    setStatus("Send error: " + err.message);
+                    return false;
+                }
+            }
+
+            function handleSend() {
+                const text = chatInput.value.trim();
+                if (!text || !isReady || isGenerating) return;
+                addBubble("user", text);
+
+                // ALWAYS send JSON with a `text` field (server expects json and reads .get('text'))
+                const ok = sendPayload({ text });
+                if (!ok) {
+                    addBubble(
+                        "ai",
+                        "Failed to send message: connection error.",
+                    );
+                } else {
+                    // Show typing indicator locally while waiting for response
+                    if (!messages.querySelector(".typing")) {
+                        pendingTypingBubble = addTypingIndicator();
+                        isGenerating = true;
+                        updateUI();
+                    }
+                }
+                chatInput.value = "";
+                autoGrow(chatInput);
+                updateUI();
+            }
+
+            /* -------------------------
+         New chat (reset) logic
+         ------------------------- */
+            newChatBtn.addEventListener("click", () => {
+                // gracefully close existing ws and reconnect fresh
+                try {
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.close();
+                    }
+                } catch (e) {
+                    dbg(e);
+                }
+                // clear UI
+                messages.innerHTML = "";
+                setStatus("Starting new session...");
+                // small delay to allow socket to close
+                setTimeout(() => {
+                    connect();
+                }, 300);
+            });
+
+            /* -------------------------
+         Input handlers
+         ------------------------- */
+            sendBtn.addEventListener("click", handleSend);
+            chatInput.addEventListener("keydown", (e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                }
+            });
+
+            function autoGrow(el) {
+                el.style.height = "auto";
+                el.style.height = Math.min(180, el.scrollHeight) + "px";
+            }
+            chatInput.addEventListener("input", () => {
+                autoGrow(chatInput);
+                updateUI();
+            });
+
+            /* -------------------------
+         3D background (kept from your original)
+         ------------------------- */
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(
+                60,
+                window.innerWidth / window.innerHeight,
+                0.1,
+                100,
+            );
+            camera.position.set(0, 0, 3.5);
+            const renderer = new THREE.WebGLRenderer({
+                canvas: $("bg-canvas"),
+                antialias: true,
+                alpha: true,
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+            const group = new THREE.Group();
+            scene.add(group);
+
+            const coreMat = new THREE.MeshStandardMaterial({
+                color: 0x8a63d2,
+                roughness: 0.4,
+                metalness: 0.2,
+            });
+            const core = new THREE.Mesh(
+                new THREE.IcosahedronGeometry(0.8, 4),
+                coreMat,
+            );
+            group.add(core);
+
+            const ringMat = new THREE.MeshStandardMaterial({
+                color: 0x9f7aea,
+                roughness: 0.8,
+                metalness: 0.1,
+                emissive: 0x3a2a51,
+                emissiveIntensity: 0.5,
+            });
+            const ring1 = new THREE.Mesh(
+                new THREE.TorusGeometry(1.5, 0.05, 16, 100),
+                ringMat,
+            );
+            ring1.rotation.x = Math.PI * 0.45;
+            const ring2 = ring1.clone();
+            ring2.rotation.y = Math.PI * 0.5;
+            group.add(ring1, ring2);
+
+            const hemiLight = new THREE.HemisphereLight(
+                0xffffff,
+                0x444444,
+                0.5,
+            );
+            scene.add(hemiLight);
+            const pointLight = new THREE.PointLight(0xffffff, 0.8);
+            pointLight.position.set(3, 3, 3);
+            scene.add(pointLight);
+
+            const clock = new THREE.Clock();
+            function animate() {
+                requestAnimationFrame(animate);
+                const t = clock.getElapsedTime();
+                group.rotation.y = t * 0.15;
+                group.rotation.x = t * 0.1;
+                core.rotation.z = t * 0.2;
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            window.addEventListener("resize", () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            // Enable debug logging by default
+            debugEnabled = true;
+            debugLog.style.display = "block";
+
+            // try to connect right away
+            connect();
+            updateUI();
+
+            // Expose debug toggle if needed in console
+            window.__companion = {
+                connect,
+                sendPayload,
+                buildWsUrl,
+                dbg,
+                enableDebug: (v = true) => {
+                    debugEnabled = v;
+                    debugLog.style.display = v ? "block" : "none";
+                },
+                // Add helper to change URL
+                setUrl: (url) => {
+                    const newUrl = new URL(window.location);
+                    newUrl.searchParams.set("api", url);
+                    window.location = newUrl;
+                },
+            };
+            console.log(
+                "Companion frontend ready. Current WebSocket URL:",
+                buildWsUrl(),
+            );
+            console.log(
+                "Use window.__companion.setUrl('wss://your-new-url') to change the backend URL",
+            );
+        </script>
+    </body>
+</html>
